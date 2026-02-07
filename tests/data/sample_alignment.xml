@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<LandXML version="1.2" xmlns="http://www.landxml.org/schema/LandXML-1.2">
+  <Project name="GDOT_SoundWall_Test" desc="Synthetic test alignment for sound wall modeling"/>
+  <Units>
+    <Metric linearUnit="meter" areaUnit="squareMeter" volumeUnit="cubicMeter"
+            angularUnit="radians" directionUnit="radians"/>
+  </Units>
+
+  <Alignments>
+    <!--
+      Test alignment: ~305m total
+      - 100m tangent heading north (azimuth 0)
+      - 105m arc curving right (R=200m, delta=~30deg)
+      - 100m tangent heading ~30deg east of north
+    -->
+    <Alignment name="SoundWall_A" length="305.24" staStart="0.000">
+      <CoordGeom>
+        <!-- Tangent 1: 100m heading due north -->
+        <Line length="100.0">
+          <Start>1000.000 2000.000</Start>
+          <End>1100.000 2000.000</End>
+        </Line>
+        <!-- Curve: R=200m, 30-degree right curve, arc length = 200*0.5236 = 104.72m -->
+        <Curve rot="cw" radius="200.0" length="104.720">
+          <Start>1100.000 2000.000</Start>
+          <Center>1100.000 2200.000</Center>
+          <End>1200.000 2100.000</End>
+        </Curve>
+        <!-- Tangent 2: 100m heading 30 degrees east of north -->
+        <Line length="100.0">
+          <Start>1200.000 2100.000</Start>
+          <End>1286.603 2150.000</End>
+        </Line>
+      </CoordGeom>
+
+      <!-- Vertical Profile: gentle grade with sag curve -->
+      <Profile>
+        <ProfAlign name="Profile_A">
+          <PVI>0.000 100.000</PVI>
+          <ParaCurve length="60.0">152.500 99.500</ParaCurve>
+          <PVI>305.240 101.500</PVI>
+        </ProfAlign>
+      </Profile>
+    </Alignment>
+  </Alignments>
+
+  <!-- Terrain Surface: flat-ish TIN covering alignment corridor -->
+  <Surfaces>
+    <Surface name="ExistingGround">
+      <Definition surfType="TIN">
+        <Pnts>
+          <!-- Row 1 (south) -->
+          <P id="1">950.000 1950.000 99.50</P>
+          <P id="2">950.000 2050.000 99.60</P>
+          <P id="3">950.000 2150.000 99.70</P>
+          <P id="4">950.000 2250.000 99.80</P>
+          <!-- Row 2 -->
+          <P id="5">1050.000 1950.000 99.40</P>
+          <P id="6">1050.000 2050.000 99.50</P>
+          <P id="7">1050.000 2150.000 99.60</P>
+          <P id="8">1050.000 2250.000 99.70</P>
+          <!-- Row 3 -->
+          <P id="9">1150.000 1950.000 99.30</P>
+          <P id="10">1150.000 2050.000 99.40</P>
+          <P id="11">1150.000 2150.000 99.50</P>
+          <P id="12">1150.000 2250.000 99.60</P>
+          <!-- Row 4 (north) -->
+          <P id="13">1250.000 1950.000 99.20</P>
+          <P id="14">1250.000 2050.000 99.30</P>
+          <P id="15">1250.000 2150.000 99.40</P>
+          <P id="16">1250.000 2250.000 99.50</P>
+          <!-- Row 5 (far north) -->
+          <P id="17">1350.000 1950.000 99.10</P>
+          <P id="18">1350.000 2050.000 99.20</P>
+          <P id="19">1350.000 2150.000 99.30</P>
+          <P id="20">1350.000 2250.000 99.40</P>
+        </Pnts>
+        <Faces>
+          <!-- Row 1-2 triangles -->
+          <F>1 5 2</F>
+          <F>2 5 6</F>
+          <F>2 6 3</F>
+          <F>3 6 7</F>
+          <F>3 7 4</F>
+          <F>4 7 8</F>
+          <!-- Row 2-3 triangles -->
+          <F>5 9 6</F>
+          <F>6 9 10</F>
+          <F>6 10 7</F>
+          <F>7 10 11</F>
+          <F>7 11 8</F>
+          <F>8 11 12</F>
+          <!-- Row 3-4 triangles -->
+          <F>9 13 10</F>
+          <F>10 13 14</F>
+          <F>10 14 11</F>
+          <F>11 14 15</F>
+          <F>11 15 12</F>
+          <F>12 15 16</F>
+          <!-- Row 4-5 triangles -->
+          <F>13 17 14</F>
+          <F>14 17 18</F>
+          <F>14 18 15</F>
+          <F>15 18 19</F>
+          <F>15 19 16</F>
+          <F>16 19 20</F>
+        </Faces>
+      </Definition>
+    </Surface>
+  </Surfaces>
+</LandXML>

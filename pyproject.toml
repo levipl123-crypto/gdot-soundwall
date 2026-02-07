@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "gdot-soundwall"
+version = "0.1.0"
+description = "GDOT Sound Wall Modeling Tool - generates IFC4.3 models from LandXML alignment data"
+requires-python = ">=3.10"
+dependencies = [
+    "ifcopenshell",
+    "ezdxf",
+    "lxml",
+    "numpy",
+    "shapely",
+]
+
+[project.optional-dependencies]
+dev = ["pytest"]
+
+[project.scripts]
+gdot-soundwall = "gdot_soundwall.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
