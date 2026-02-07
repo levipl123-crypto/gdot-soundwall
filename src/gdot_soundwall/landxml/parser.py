@@ -4,6 +4,9 @@ Parses a LandXML file and extracts:
 - HorizontalAlignment (CoordGeom elements: Line, Curve, Spiral)
 - VerticalProfile (ProfAlign PVIs and vertical curves)
 - TerrainSurface (TIN mesh from Surfaces/Surface)
+
+Automatically detects imperial (US Survey Feet) vs metric units and
+converts all output values to meters for internal use.
 """
 from __future__ import annotations
 
@@ -20,35 +23,9 @@ from gdot_soundwall.landxml.profile import VerticalProfile, PVI
 from gdot_soundwall.landxml.surface import TerrainSurface
 from gdot_soundwall.utils.math_helpers import azimuth_from_points
 
-
-# LandXML namespaces
-LANDXML_NS = {
-    "lx": "http://www.landxml.org/schema/LandXML-1.2",
-    "lx11": "http://www.landxml.org/schema/LandXML-1.1",
-}
-
-
-def _find_with_ns(root: etree._Element, xpath_parts: str) -> list:
-    """Try finding elements with and without namespace."""
-    # Try with LandXML 1.2 namespace
-    try:
-        result = root.xpath(xpath_parts, namespaces=LANDXML_NS)
-        if result:
-            return result
-    except Exception:
-        pass
-
-    # Try without namespace (common in practice)
-    # Strip namespace prefixes
-    plain = xpath_parts.replace("lx:", "")
-    try:
-        result = root.xpath(plain)
-        if result:
-            return result
-    except Exception:
-        pass
-
-    return []
+# US Survey Foot to meter
+US_SURVEY_FT_TO_M = 0.30480060960121924
+INTL_FT_TO_M = 0.3048
 
 
 def _parse_coords(text: str) -> Tuple[float, float]:
@@ -56,12 +33,6 @@ def _parse_coords(text: str) -> Tuple[float, float]:
     parts = text.strip().split()
     # LandXML uses northing, easting order
     return float(parts[1]), float(parts[0])  # return easting, northing
-
-
-def _parse_coords_3d(text: str) -> Tuple[float, float, float]:
-    """Parse 'northing easting elevation' from LandXML."""
-    parts = text.strip().split()
-    return float(parts[1]), float(parts[0]), float(parts[2]) if len(parts) > 2 else 0.0
 
 
 class LandXMLParser:
@@ -77,14 +48,58 @@ class LandXMLParser:
         if "{" in root_tag:
             self.ns = root_tag.split("}")[0] + "}"
 
+        # Detect linear units
+        self._linear_scale = 1.0  # meters by default
+        self._unit_name = "meter"
+        self._detect_units()
+
+    def _detect_units(self) -> None:
+        """Detect whether the file uses imperial or metric linear units."""
+        # Look for <Units><Imperial .../> or <Units><Metric .../>
+        units_elem = self._find_first(self.root, "Units")
+        if units_elem is None:
+            return
+
+        imperial = self._find_first(units_elem, "Imperial")
+        if imperial is not None:
+            lu = (imperial.get("linearUnit") or "").lower()
+            if "ussurveyfoo" in lu or "usfoot" in lu or "ussurvey" in lu:
+                self._linear_scale = US_SURVEY_FT_TO_M
+                self._unit_name = "USSurveyFoot"
+            elif "foot" in lu or "feet" in lu:
+                self._linear_scale = INTL_FT_TO_M
+                self._unit_name = "foot"
+            return
+
+        metric = self._find_first(units_elem, "Metric")
+        if metric is not None:
+            lu = (metric.get("linearUnit") or "").lower()
+            if "meter" in lu or "metre" in lu:
+                self._linear_scale = 1.0
+                self._unit_name = "meter"
+
+    def _to_m(self, value: float) -> float:
+        """Convert a length value from file units to meters."""
+        return value * self._linear_scale
+
+    @property
+    def is_imperial(self) -> bool:
+        return self._linear_scale != 1.0
+
     def _tag(self, local_name: str) -> str:
         """Return fully qualified tag name."""
         return f"{self.ns}{local_name}"
 
     def _find(self, parent: etree._Element, path: str) -> list:
         """Find elements supporting both namespaced and plain XML."""
-        parts = path.split("/")
-        qualified = "/".join(self._tag(p) for p in parts)
+        # Handle ".//X/Y" patterns
+        if path.startswith(".//"):
+            inner = path[3:]
+            parts = inner.split("/")
+            qualified = ".//" + "/".join(self._tag(p) for p in parts)
+        else:
+            parts = path.split("/")
+            qualified = "/".join(self._tag(p) for p in parts)
         result = parent.findall(qualified)
         if not result:
             result = parent.findall(path)
@@ -98,8 +113,8 @@ class LandXMLParser:
     def parse_alignment(self, alignment_name: str = "") -> HorizontalAlignment:
         """Parse horizontal alignment from CoordGeom elements.
 
-        Args:
-            alignment_name: Specific alignment name to find. If empty, uses first.
+        All coordinates and lengths are converted to meters.
+        Bearings (dir attributes) are in radians and kept as-is.
         """
         alignment = HorizontalAlignment()
 
@@ -118,7 +133,7 @@ class LandXMLParser:
                     break
 
         alignment.name = align_elem.get("name", "Alignment")
-        sta_start = float(align_elem.get("staStart", "0"))
+        sta_start = self._to_m(float(align_elem.get("staStart", "0")))
 
         # Parse CoordGeom
         coord_geom = self._find_first(align_elem, "CoordGeom")
@@ -140,13 +155,24 @@ class LandXMLParser:
 
                 se, sn = _parse_coords(start_elem.text)
                 ee, en = _parse_coords(end_elem.text)
-                length = float(elem.get("length", str(
-                    math.sqrt((ee - se) ** 2 + (en - sn) ** 2)
-                )))
+                se, sn = self._to_m(se), self._to_m(sn)
+                ee, en = self._to_m(ee), self._to_m(en)
 
-                bearing = azimuth_from_points(se, sn, ee, en)
+                length_raw = elem.get("length")
+                if length_raw is not None:
+                    length = self._to_m(float(length_raw))
+                else:
+                    length = math.sqrt((ee - se) ** 2 + (en - sn) ** 2)
+
+                # Use dir attribute if present (already in radians)
+                dir_attr = elem.get("dir")
+                if dir_attr is not None:
+                    bearing = float(dir_attr)
+                else:
+                    bearing = azimuth_from_points(se, sn, ee, en)
+
                 seg = LineSegment(
-                    segment_type=None,  # Set in __post_init__
+                    segment_type=None,
                     start_station=current_station,
                     end_station=current_station + length,
                     start_easting=se,
@@ -168,9 +194,12 @@ class LandXMLParser:
                 se, sn = _parse_coords(start_elem.text)
                 ee, en = _parse_coords(end_elem.text)
                 ce, cn = _parse_coords(center_elem.text)
+                se, sn = self._to_m(se), self._to_m(sn)
+                ee, en = self._to_m(ee), self._to_m(en)
+                ce, cn = self._to_m(ce), self._to_m(cn)
 
-                radius = float(elem.get("radius", "0"))
-                length = float(elem.get("length", "0"))
+                radius = self._to_m(float(elem.get("radius", "0")))
+                length = self._to_m(float(elem.get("length", "0")))
                 rot = elem.get("rot", "cw")
                 is_cw = rot.lower() == "cw"
 
@@ -211,15 +240,30 @@ class LandXMLParser:
 
                 se, sn = _parse_coords(start_elem.text)
                 ee, en = _parse_coords(end_elem.text)
-                length = float(elem.get("length", "0"))
-                radius_start = float(elem.get("radiusStart", "INF"))
-                radius_end = float(elem.get("radiusEnd", "INF"))
+                se, sn = self._to_m(se), self._to_m(sn)
+                ee, en = self._to_m(ee), self._to_m(en)
+                length = self._to_m(float(elem.get("length", "0")))
+                radius_start = elem.get("radiusStart", "INF")
+                radius_end = elem.get("radiusEnd", "INF")
                 rot = elem.get("rot", "cw")
 
-                if radius_start == 0 or str(radius_start).upper() == "INF":
-                    radius_start = float('inf')
-                if radius_end == 0 or str(radius_end).upper() == "INF":
-                    radius_end = float('inf')
+                try:
+                    rs = float(radius_start)
+                    if rs == 0:
+                        rs = float('inf')
+                    else:
+                        rs = self._to_m(rs)
+                except ValueError:
+                    rs = float('inf')
+
+                try:
+                    re = float(radius_end)
+                    if re == 0:
+                        re = float('inf')
+                    else:
+                        re = self._to_m(re)
+                except ValueError:
+                    re = float('inf')
 
                 # Compute start bearing from previous segment or from coords
                 start_bearing = azimuth_from_points(se, sn, ee, en)
@@ -235,8 +279,8 @@ class LandXMLParser:
                     start_northing=sn,
                     end_easting=ee,
                     end_northing=en,
-                    start_radius=radius_start,
-                    end_radius=radius_end,
+                    start_radius=rs,
+                    end_radius=re,
                     start_bearing=start_bearing,
                     is_clockwise=rot.lower() == "cw",
                 )
@@ -246,10 +290,12 @@ class LandXMLParser:
         return alignment
 
     def parse_profile(self, alignment_name: str = "") -> VerticalProfile:
-        """Parse vertical profile (ProfAlign) from alignment."""
+        """Parse vertical profile (ProfAlign) from alignment.
+
+        Stations and elevations are converted to meters.
+        """
         profile = VerticalProfile()
 
-        # Find Profile under Alignment
         alignments = self._find(self.root, ".//Alignments/Alignment")
         if not alignments:
             alignments = self._find(self.root, "Alignments/Alignment")
@@ -263,7 +309,6 @@ class LandXMLParser:
                     align_elem = a
                     break
 
-        # Find Profile -> ProfAlign
         prof_elem = self._find_first(align_elem, "Profile")
         if prof_elem is None:
             return profile
@@ -274,7 +319,6 @@ class LandXMLParser:
 
         profile.name = prof_align.get("name", "Profile")
 
-        # Parse PVI elements
         for elem in prof_align:
             if not isinstance(elem.tag, str):
                 continue
@@ -282,15 +326,15 @@ class LandXMLParser:
 
             if tag == "PVI":
                 parts = elem.text.strip().split()
-                station = float(parts[0])
-                elevation = float(parts[1])
+                station = self._to_m(float(parts[0]))
+                elevation = self._to_m(float(parts[1]))
                 profile.pvis.append(PVI(station=station, elevation=elevation))
 
             elif tag in ("CircCurve", "ParaCurve"):
                 parts = elem.text.strip().split()
-                station = float(parts[0])
-                elevation = float(parts[1])
-                curve_length = float(elem.get("length", "0"))
+                station = self._to_m(float(parts[0]))
+                elevation = self._to_m(float(parts[1]))
+                curve_length = self._to_m(float(elem.get("length", "0")))
                 profile.pvis.append(PVI(
                     station=station,
                     elevation=elevation,
@@ -300,7 +344,10 @@ class LandXMLParser:
         return profile
 
     def parse_surface(self, surface_name: str = "") -> TerrainSurface:
-        """Parse terrain surface (TIN) from Surfaces element."""
+        """Parse terrain surface (TIN) from Surfaces element.
+
+        Coordinates are converted to meters.
+        """
         surface = TerrainSurface()
 
         surfaces = self._find(self.root, ".//Surfaces/Surface")
@@ -318,7 +365,6 @@ class LandXMLParser:
 
         surface.name = surf_elem.get("name", "Surface")
 
-        # Parse Definition/Pnts/P elements
         defn = self._find_first(surf_elem, "Definition")
         if defn is None:
             return surface
@@ -329,7 +375,6 @@ class LandXMLParser:
         if pnts is None:
             return surface
 
-        # Build vertex array indexed by point ID
         vertices = {}
         for p in pnts:
             if not isinstance(p.tag, str):
@@ -338,17 +383,16 @@ class LandXMLParser:
             if tag == "P":
                 pid = int(p.get("id"))
                 parts = p.text.strip().split()
-                # LandXML: northing easting elevation
-                n, e, z = float(parts[0]), float(parts[1]), float(parts[2])
+                n = self._to_m(float(parts[0]))
+                e = self._to_m(float(parts[1]))
+                z = self._to_m(float(parts[2]))
                 vertices[pid] = (e, n, z)
 
-        # Reindex vertices to 0-based array
         sorted_ids = sorted(vertices.keys())
         id_map = {pid: idx for idx, pid in enumerate(sorted_ids)}
         vert_array = [vertices[pid] for pid in sorted_ids]
         surface.vertices = vert_array
 
-        # Parse Faces/F elements
         if faces is not None:
             tri_list = []
             for f in faces:

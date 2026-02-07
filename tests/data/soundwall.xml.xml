@@ -1,0 +1,96 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<LandXML xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.landxml.org/schema/LandXML-1.2 http://www.landxml.org/schema/landxml-1.2/LandXML-1.2.xsd" version="1.2" date="2026-01-02" time="11:59:03" xmlns="http://www.landxml.org/schema/LandXML-1.2">
+	<Units>
+		<Imperial areaUnit="squareFoot" linearUnit="USSurveyFoot" volumeUnit="cubicYard" temperatureUnit="fahrenheit" pressureUnit="inHG" directionUnit="radians" />
+	</Units>
+	<Application name="OpenRoads Designer" version="23.00.01.11" manufacturer="Bentley Systems, Inc." manufacturerURL="http://www.bentley.com" />
+	<CgPoints />
+	<Alignments>
+		<Alignment name="US17EB" length="9459.8424045141455" state="proposed" staStart="0">
+			<CoordGeom name="US17EB" state="proposed">
+				<Line dir="0.078530282428466144" length="471.71684144884762">
+					<Start>177790.75884441964 2311648.5952160181 0</Start>
+					<End>177827.76483779479 2312118.8582647056 0</End>
+					<Feature>
+						<Property label="style" value="Alignment\Design\Alignment_Major" />
+					</Feature>
+				</Line>
+				<Curve crvType="arc" rot="cw" radius="1199.0943516167545" length="885.72034892875706" chord="865.72129459211772">
+					<Start>177827.76483779479 2312118.8582647056 0</Start>
+					<Center>176632.36599699187 2312212.9267264036 0</Center>
+					<End>177579.54749161634 2312948.2324317535 0</End>
+					<Feature>
+						<Property label="style" value="Alignment\Design\Alignment_Major" />
+					</Feature>
+				</Curve>
+				<Line dir="5.623057828661465" length="2552.7850393805061">
+					<Start>177579.54749161637 2312948.2324317535 0</Start>
+					<End>176014.1348938022 2314964.7132414537 0</End>
+					<Feature>
+						<Property label="style" value="Alignment\Design\Alignment_Major" />
+					</Feature>
+				</Line>
+				<Curve crvType="arc" rot="ccw" radius="3182.2110409848392" length="968.17519964398957" chord="964.44536018008023">
+					<Start>176014.13489380197 2314964.7132414537 0</Start>
+					<Center>178527.80815558205 2316916.1009124145 0</Center>
+					<End>175544.99523759357 2315807.3655041014 0</End>
+					<Feature>
+						<Property label="style" value="Alignment\Design\Alignment_Major" />
+					</Feature>
+				</Curve>
+				<Line dir="5.9273038975658601" length="2580.5608204420805">
+					<Start>175544.99523759345 2315807.3655041014 0</Start>
+					<End>174645.88480208785 2318226.2277516811 0</End>
+					<Feature>
+						<Property label="style" value="Alignment\Design\Alignment_Major" />
+					</Feature>
+				</Line>
+				<Curve crvType="arc" rot="cw" radius="637.61323399376124" length="301.76379186116912" chord="298.95538857716241">
+					<Start>174645.88480208782 2318226.2277516811 0</Start>
+					<Center>174048.22456945668 2318004.0726650967 0</Center>
+					<End>174478.93297957224 2318474.222536542 0</End>
+					<Feature>
+						<Property label="style" value="Alignment\Design\Alignment_Major" />
+					</Feature>
+				</Curve>
+				<Line dir="5.4540329932418539" length="103.41369803414783">
+					<Start>174478.93297957227 2318474.222536542 0</Start>
+					<End>174402.6799561966 2318544.07859832 0</End>
+					<Feature>
+						<Property label="style" value="Alignment\Design\Alignment_Major" />
+					</Feature>
+				</Line>
+				<Curve crvType="arc" rot="ccw" radius="357.48316559176351" length="338.76396363716668" chord="326.22987228230193">
+					<Start>174402.67995619657 2318544.07859832 0</Start>
+					<Center>174644.16021050484 2318807.6720361384 0</Center>
+					<End>174289.18335926154 2318849.9289735914 0</End>
+					<Feature>
+						<Property label="style" value="Alignment\Design\Alignment_Major" />
+					</Feature>
+				</Curve>
+				<Line dir="0.11848381621763206" length="1256.9427011374785">
+					<Start>174289.1833592616 2318849.9289735914 0</Start>
+					<End>174437.76252107017 2320098.0592498924 0</End>
+					<Feature>
+						<Property label="style" value="Alignment\Design\Alignment_Major" />
+					</Feature>
+				</Line>
+			</CoordGeom>
+			<Profile>
+				<ProfAlign name="Alignment_Major">
+					<PVI>0 -3.4744688051058938</PVI>
+					<CircCurve length="186.43416102218421" radius="10000">1318.5942811776661 10.822596264539783</CircCurve>
+					<CircCurve length="138.92658941857539" radius="10000">1815.2070277195157 25.469789869654399</CircCurve>
+					<CircCurve length="263.33004089046597" radius="10000">3915.0082965045813 58.214621778171065</CircCurve>
+					<CircCurve length="293.06533573874248" radius="10000">5242.2782396658313 113.89436041516625</CircCurve>
+					<CircCurve length="569.19703696627346" radius="10000">6036.381127358185 123.91604161393747</CircCurve>
+					<CircCurve length="875.16921128818467" radius="10000">8467.5437674559453 16.144432665352046</CircCurve>
+					<PVI>9459.8424045141455 59.055</PVI>
+					<Feature code="ProfAlign">
+						<Property label="style" value="Alignment\Design\Alignment_Major" />
+					</Feature>
+				</ProfAlign>
+			</Profile>
+		</Alignment>
+	</Alignments>
+</LandXML>
